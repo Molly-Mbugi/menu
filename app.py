@@ -114,7 +114,7 @@ def create_order():
         order_items = data.get('order_items', [])  # Default to empty list if not provided
 
         if not user_id or not order_items:
-            return jsonify({"error": "Missing user_id or order_items"}), 400
+            raise ValueError("Missing user_id or order_items")
 
         new_order = Order(user_id=user_id, status="Pending")
         db.session.add(new_order)
@@ -124,10 +124,10 @@ def create_order():
             menuitem_id = item.get('menuitem_id')
             quantity = item.get('quantity')
             if not menuitem_id or quantity is None:
-                return jsonify({"error": "Missing menuitem_id or quantity"}), 400
+                raise ValueError("Missing menuitem_id or quantity")
             menu_item = MenuItem.query.get(menuitem_id)
             if not menu_item:
-                return jsonify({"error": f"Menu item with ID {menuitem_id} not found"}), 404
+                raise ValueError(f"Menu item with ID {menuitem_id} not found")
             order_item = OrderItem(
                 order_id=new_order.id,
                 menu_item_id=menuitem_id,
