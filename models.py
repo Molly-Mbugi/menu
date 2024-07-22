@@ -95,7 +95,6 @@ class OrderItem(db.Model, SerializerMixin):
     menuitem_price = db.Column(db.Float, nullable=False)
     menu_item_image = db.Column(db.String(200))
     quantity = db.Column(db.Integer, nullable=False)
-    # user_id = db.Column(db.Integer, nullable=False)  # Assuming session_id field
 
     order = db.relationship('Order', back_populates='order_items')
     menu_item = db.relationship('MenuItem', back_populates='order_items')
@@ -108,8 +107,7 @@ class OrderItem(db.Model, SerializerMixin):
             'menuitem_name': self.menuitem_name,
             'menuitem_price': self.menuitem_price,
             'menu_item_image': self.menu_item_image,
-            'quantity': self.quantity,
-            'session_id': self.session_id
+            'quantity': self.quantity
         }
         if include_order:
             data['order'] = self.order.to_dict(include_user=False, include_order_items=False)
