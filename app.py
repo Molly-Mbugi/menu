@@ -5,7 +5,6 @@ from flask_restful import Api, Resource
 from werkzeug.exceptions import NotFound
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
-
 from models import MenuItem, Order, OrderItem, User, db  # Import only necessary models and db
 
 app = Flask(__name__)
@@ -25,7 +24,6 @@ api = Api(app)
 def index():
     return 'Welcome to your Flask App!'
 
-
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -38,7 +36,6 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if user and check_password_hash(user.password, password):
-        
         return jsonify({
             'id': user.id,
             'username': user.username,
@@ -48,7 +45,7 @@ def login():
     else:
         return jsonify({'error': 'Invalid credentials'}), 401
 
-@app.route('/menu', methods=['GET', 'POST', 'DELETE'])
+@app.route('/menu', methods=['GET', 'POST'])
 def handle_menu_items():
     if request.method == 'GET':
         menu_items = MenuItem.query.all()
@@ -62,7 +59,8 @@ def handle_menu_items():
         new_menu_item = MenuItem(
             name=data['name'],
             price=data['price'],
-            description=data.get('description')
+            description=data.get('description'),
+            image=data.get('image')  # Ensure image is included if provided
         )
 
         db.session.add(new_menu_item)
@@ -72,7 +70,7 @@ def handle_menu_items():
 
 @app.route('/menu/<int:id>', methods=['GET', 'DELETE'])
 def handle_menu_item(id):
-    menu_item = MenuItem.query.filter_by(id=id).first()
+    menu_item = MenuItem.query.get(id)
     if not menu_item:
         raise NotFound("Menu item not found")
     
@@ -83,17 +81,17 @@ def handle_menu_item(id):
         db.session.delete(menu_item)
         db.session.commit()
         return jsonify({"message": "Menu item deleted successfully"})
+
 @app.route('/api/orders', methods=['GET'])
 def get_orders():
     try:
         orders = Order.query.all()
-        orders_list = [order.to_dict() for order in orders]
+        orders_list = [order.to_dict(include_order_items=True) for order in orders]
         return jsonify(orders_list), 200
     except Exception as e:
         app.logger.error(f"Error fetching orders: {e}")
         return jsonify({"error": "Failed to fetch orders"}), 500
 
-# Route to get a specific order by ID
 @app.route('/api/orders/<int:id>', methods=['GET'])
 def get_order(id):
     try:
@@ -101,28 +99,18 @@ def get_order(id):
         if not order:
             return jsonify({"error": "Order not found"}), 404
 
-        order_data = order.to_dict()
-        order_data['order_items'] = [
-            {
-                'menuitem_id': item.menu_item_id,
-                'name': item.menu_item.name,
-                'price': item.menu_item.price,
-                'quantity': item.quantity
-            } for item in order.order_items
-        ]
+        order_data = order.to_dict(include_order_items=True)
         return jsonify(order_data), 200
     except Exception as e:
         app.logger.error(f"Error fetching order: {e}")
         return jsonify({"error": "Failed to fetch order"}), 500
 
-
-# Route to create a new order
 @app.route('/api/orders', methods=['POST'])
 def create_order():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        order_items = data.get('order_items')  # List of order items with menuitem_id and quantity
+        order_items = data.get('order_items', [])  # Default to empty list if not provided
 
         if not user_id or not order_items:
             raise ValueError("Missing user_id or order_items")
@@ -139,12 +127,18 @@ def create_order():
             menu_item = MenuItem.query.get(menuitem_id)
             if not menu_item:
                 raise ValueError(f"Menu item with ID {menuitem_id} not found")
-            order_item = OrderItem(order_id=new_order.id, menu_item_id=menuitem_id, quantity=quantity,
-                                   menuitem_name=menu_item.name, menuitem_price=menu_item.price, menu_item_image=menu_item.image)
+            order_item = OrderItem(
+                order_id=new_order.id, 
+                menu_item_id=menuitem_id, 
+                quantity=quantity,
+                menuitem_name=menu_item.name, 
+                menuitem_price=menu_item.price, 
+                menu_item_image=menu_item.image
+            )
             db.session.add(order_item)
 
         db.session.commit()
-        return jsonify(new_order.to_dict()), 201
+        return jsonify(new_order.to_dict(include_order_items=True)), 201
 
     except ValueError as e:
         app.logger.error(f"ValueError: {e}")
@@ -153,7 +147,6 @@ def create_order():
         app.logger.error(f"Error creating order: {e}")
         return jsonify({"error": "Failed to create order"}), 500
 
-# Route to update a specific order by ID
 @app.route('/api/orders/<int:id>', methods=['PUT'])
 def update_order(id):
     try:
@@ -172,7 +165,6 @@ def update_order(id):
         app.logger.error(f"Error updating order: {e}")
         return jsonify({"error": "Failed to update order"}), 500
 
-# Route to delete a specific order by ID
 @app.route('/api/orders/<int:id>', methods=['DELETE'])
 def delete_order(id):
     try:
@@ -189,6 +181,6 @@ def delete_order(id):
     except Exception as e:
         app.logger.error(f"Error deleting order: {e}")
         return jsonify({"error": "Failed to delete order"}), 500
-    
+
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
