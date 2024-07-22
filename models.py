@@ -79,10 +79,10 @@ class Order(db.Model, SerializerMixin):
             'order_date': self.order_date,
             'status': self.status,
         }
-        if include_user:
+        if include_user and self.user:
             data['user'] = self.user.to_dict(include_orders=False)
         if include_order_items:
-            data['order_items'] = [order_item.to_dict(include_order=False) for order_item in self.order_items]
+            data['order_items'] = [order_item.to_dict(include_order=False) for order_item in self.order_items] if self.order_items else []
         return data
 
 class OrderItem(db.Model, SerializerMixin):
@@ -109,8 +109,9 @@ class OrderItem(db.Model, SerializerMixin):
             'menu_item_image': self.menu_item_image,
             'quantity': self.quantity
         }
-        if include_order:
+        if include_order and self.order:
             data['order'] = self.order.to_dict(include_user=False, include_order_items=False)
-        if include_menu_item:
+        if include_menu_item and self.menu_item:
             data['menu_item'] = self.menu_item.to_dict(include_order_items=False)
         return data
+
