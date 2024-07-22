@@ -18,6 +18,8 @@ migrate = Migrate(app, db)
 
 api = Api(app)
 
+# Views go here
+
 @app.route('/')
 def index():
     return 'Welcome to your Flask App!'
@@ -58,7 +60,7 @@ def handle_menu_items():
             name=data['name'],
             price=data['price'],
             description=data.get('description'),
-            image=data.get('image')
+            image=data.get('image')  # Ensure image is included if provided
         )
 
         db.session.add(new_menu_item)
@@ -84,9 +86,6 @@ def handle_menu_item(id):
 def get_orders():
     try:
         orders = Order.query.all()
-        if not orders:
-            return jsonify([]), 200  # Return empty list if no orders found
-        
         orders_list = [order.to_dict(include_order_items=True) for order in orders]
         return jsonify(orders_list), 200
     except Exception as e:
@@ -129,21 +128,59 @@ def create_order():
             if not menu_item:
                 raise ValueError(f"Menu item with ID {menuitem_id} not found")
             order_item = OrderItem(
-                order_id=new_order.id,
-                menu_item_id=menuitem_id,
-                menuitem_name=menu_item.name,
-                menuitem_price=menu_item.price,
-                menu_item_image=menu_item.image,
-                quantity=quantity
+                order_id=new_order.id, 
+                menu_item_id=menuitem_id, 
+                quantity=quantity,
+                menuitem_name=menu_item.name, 
+                menuitem_price=menu_item.price, 
+                menu_item_image=menu_item.image
             )
             db.session.add(order_item)
 
         db.session.commit()
-        return jsonify({"message": "Order created successfully", "order": new_order.to_dict(include_order_items=True)}), 201
+        return jsonify(new_order.to_dict(include_order_items=True)), 201
+
+    except ValueError as e:
+        app.logger.error(f"ValueError: {e}")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         app.logger.error(f"Error creating order: {e}")
         return jsonify({"error": "Failed to create order"}), 500
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/api/orders/<int:id>', methods=['PUT'])
+def update_order(id):
+    try:
+        data = request.get_json()
+        order = Order.query.get(id)
+        if not order:
+            raise NotFound("Order not found")
 
+        order.status = data.get('status', order.status)
+        db.session.commit()
+        return jsonify(order.to_dict()), 200
+
+    except NotFound as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        app.logger.error(f"Error updating order: {e}")
+        return jsonify({"error": "Failed to update order"}), 500
+
+@app.route('/api/orders/<int:id>', methods=['DELETE'])
+def delete_order(id):
+    try:
+        order = Order.query.get(id)
+        if not order:
+            raise NotFound("Order not found")
+
+        db.session.delete(order)
+        db.session.commit()
+        return jsonify({"message": "Order deleted successfully"}), 200
+
+    except NotFound as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        app.logger.error(f"Error deleting order: {e}")
+        return jsonify({"error": "Failed to delete order"}), 500
+
+if __name__ == '__main__':
+    app.run(port=5555, debug=True)

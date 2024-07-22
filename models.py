@@ -65,7 +65,7 @@ class Order(db.Model, SerializerMixin):
     __tablename__ = 'orders'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     order_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), nullable=False)
     
@@ -89,13 +89,13 @@ class OrderItem(db.Model, SerializerMixin):
     __tablename__ = 'order_items'
     
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, index=True)
-    menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_items.id'), nullable=False, index=True)
-    menu_item_name = db.Column(db.String, nullable=False)
-    menu_item_price = db.Column(db.Float, nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_items.id'), nullable=False)
+    menuitem_name = db.Column(db.String, nullable=False)
+    menuitem_price = db.Column(db.Float, nullable=False)
     menu_item_image = db.Column(db.String(200))
     quantity = db.Column(db.Integer, nullable=False)
-    
+
     order = db.relationship('Order', back_populates='order_items')
     menu_item = db.relationship('MenuItem', back_populates='order_items')
     
@@ -104,8 +104,8 @@ class OrderItem(db.Model, SerializerMixin):
             'id': self.id,
             'order_id': self.order_id,
             'menu_item_id': self.menu_item_id,
-            'menu_item_name': self.menu_item_name,
-            'menu_item_price': self.menu_item_price,
+            'menuitem_name': self.menuitem_name,
+            'menuitem_price': self.menuitem_price,
             'menu_item_image': self.menu_item_image,
             'quantity': self.quantity
         }
